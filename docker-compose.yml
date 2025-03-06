@@ -1,0 +1,63 @@
+
+services:
+    # PHP Service container
+    test_app:
+        platform: linux/amd64
+        build:
+            args:
+                user: test_app_user
+                uid: 1000
+            context: .
+            dockerfile: dockerfile
+        image: test_app_image
+        container_name: test_app
+        restart: unless-stopped
+        working_dir: /var/www
+        ports: 
+          - "9000:9000"
+        volumes:
+            -   ./:/var/www
+        networks:
+            - test_app_network
+
+    #nginx service
+    test_app_webserver:
+        platform: linux/amd64
+        image: nginx:alpine
+        container_name: test_app_webserver_container
+        depends_on:
+          - test_app
+        restart: unless-stopped
+        ports:
+            - "80:80"
+        volumes:
+            - ./:/var/www
+            - ./docker-compose/nginx/:/etc/nginx/conf.d/
+        networks:
+            - test_app_network
+
+    #mysql service
+    test_app_mysql:
+        platform: linux/amd64
+        image: mysql:latest
+        container_name: test_app_mysql_container
+        restart: unless-stopped
+        ports:
+            - "3337:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: password
+            MYSQL_DATABASE: test_app_db
+            MYSQL_USER: test_app_user
+            MYSQL_PASSWORD: password
+        volumes:
+            -   test_app_mysql_data:/var/lib/mysql
+        networks:
+            - test_app_network
+
+volumes:
+    test_app_mysql_data:
+        driver: local
+networks:
+    test_app_network:
+       driver: bridge
+
